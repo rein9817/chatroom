@@ -355,9 +355,6 @@ export default function Console({ selectedChannel }) {
                             <PaperclipIcon className="h-5 w-5" />
                         </Button>
                     </div>
-                    <Button size="icon" variant="ghost">
-                        <VideoIcon className="h-5 w-5" />
-                    </Button>
                     <Button size="icon" variant="ghost" onClick={handleSend}>
                         <SendIcon className="h-5 w-5" />
                     </Button>

@@ -167,6 +167,10 @@ export default function Channels({ setSelectedChannel }) {
                     <button className="btn-icon" onClick={handleAddChannel}>
                         <PlusIcon className="h-4 w-4" />
                     </button>
+                    <label className="cursor-pointer rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600">
+                        Upload
+                        <input type="file" className="hidden" onChange={handleUploadProfile} accept="image/*" />
+                    </label>
                 </div>
                     <div className="flex items-center space-x-3 rounded-md px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-800">
                         <Avatar className="h-12 w-12">
@@ -177,10 +181,7 @@ export default function Channels({ setSelectedChannel }) {
                         <p className="text-sm font-medium">{username}</p>
                         <p className="text-xs font-medium">{auth.currentUser?.email}</p>
                     </div>
-                    <label className="cursor-pointer rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600">
-                        Upload
-                        <input type="file" className="hidden" onChange={handleUploadProfile} accept="image/*" />
-                    </label>
+                    
                 </div>
                 <hr className="my-4 border-t border-gray-200 dark:border-gray-700"/>
                 <div className="flex-1 overflow-y-auto">
