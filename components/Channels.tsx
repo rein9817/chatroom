@@ -4,25 +4,52 @@ import { auth } from "../app/config";
 import { getDatabase, ref, onValue ,get,child,push,set} from 'firebase/database';
 import Channel from './Channel';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function Channels({ setSelectedChannel }) {
     const [channels, setChannels] = useState([]);
     const [username, setUsername] = useState('');
+    const [userAvatar, setUserAvatar] = useState({
+        url: '',
+        alt: '',
+    });
 
     useEffect(() => {
         const user = auth.currentUser;
         if (user) {
             const database = getDatabase();
             const userRef = ref(database, 'users/' + user.uid);
+            const encodedEmail = encodeEmail(user.email);
+            const avatarRef = ref(database, `avatars/${encodedEmail}`);
 
-            // 获取用户数据，包括用户名
             get(userRef).then((snapshot) => {
                 if (snapshot.exists()) {
                     const userData = snapshot.val();
-                    setUsername(userData.userName);  // 假设用户名存储在 'username' 字段
+                    setUsername(userData.userName);
                 }
             });
 
+            get(avatarRef).then((snapshot) => {
+                if (snapshot.exists() && snapshot.val().fileName) {
+                    const fileName = snapshot.val().fileName;
+                    const storage = getStorage();
+                    const StorageRef = storageRef(storage, `avatars/${encodedEmail}/${fileName}`);
+
+                    getDownloadURL(StorageRef).then((url) => {
+                        setUserAvatar({
+                            url: url,
+                            alt: `Avatar for ${user.email}`
+                        });
+                    }).catch(error => {
+                        console.error('Error fetching download URL:', error);
+                    });
+                }
+            }).catch(error => {
+                console.error('Error fetching avatar data:', error);
+            });
+
+            // Fetch channels
             const channelsRef = ref(database, 'users/' + user.uid + '/channels');
             const unsubscribe = onValue(channelsRef, (snapshot) => {
                 const channels = [];
@@ -39,7 +66,16 @@ export default function Channels({ setSelectedChannel }) {
         } else {
             console.log('User not authenticated');
         }
-    }, []);
+    }, [auth.currentUser]);
+    
+
+    function encodeEmail(email:string) {
+        return email.replace(/\./g, ',');
+    }
+
+    function decodeEmail(encodedEmail:string) {
+        return encodedEmail.replace(/,/g, '.');
+    }
 
     const handleAddChannel = () => {
         const newChannelName = prompt('Enter channel name');
@@ -91,6 +127,38 @@ export default function Channels({ setSelectedChannel }) {
         setSelectedChannel(channel); // Update selected channel
     };
 
+    const handleUploadProfile = (e:any) => {    
+        if (!e.target.files.length) return;
+        const file = e.target.files[0];
+        const user = auth.currentUser;
+        if (!user) return console.error("No user logged in");
+        
+        const encodedEmail = encodeEmail(user.email);
+        const StorageRef = storageRef(getStorage(), `avatars/${encodedEmail}/${file.name}`);
+        const avatarRef = ref(getDatabase(), `avatars/${encodedEmail}`);
+    
+        set(avatarRef, {fileName: file.name}).then(() => {
+            console.log('Avatar metadata added successfully.');
+        }).catch(error => {
+            console.error("Error adding avatar metadata:", error);
+        });
+        
+        uploadBytes(StorageRef, file).then((snapshot) => {
+            getDownloadURL(snapshot.ref).then((downloadURL) => {
+                setUserAvatar({
+                    url: downloadURL,
+                    alt: `Avatar for ${user.email}`
+                });
+                console.log("Avatar uploaded and URL set in state");
+            }).catch(error => {
+                console.error('Error fetching download URL:', error);
+            });
+        }).catch((error) => {
+            console.error('Error uploading image:', error);
+        });
+    };
+    
+
     return (
         <div className="hidden lg:block border-r bg-gray-100/40 dark:bg-gray-800/40">
             <div className="flex h-full max-h-screen flex-col p-4">
@@ -100,20 +168,21 @@ export default function Channels({ setSelectedChannel }) {
                         <PlusIcon className="h-4 w-4" />
                     </button>
                 </div>
-                {/* 用户头像固定部分 */}
-                <div className="flex items-center space-x-3 rounded-md px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-800">
-                    <Avatar className="h-12 w-12">
-                        <AvatarImage alt="John Doe" src="/placeholder-avatar.jpg" />
-                        <AvatarFallback>{auth.currentUser?.email?.slice(0, auth.currentUser.email.indexOf("@")).toUpperCase()}</AvatarFallback>
-                    </Avatar>
+                    <div className="flex items-center space-x-3 rounded-md px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-800">
+                        <Avatar className="h-12 w-12">
+                            <AvatarImage alt={`Avatar for ${auth.currentUser?.email}`} src={userAvatar.url || "/placeholder-avatar.jpg"} />
+                            <AvatarFallback>{auth.currentUser?.email?.slice(0, auth.currentUser.email.indexOf("@")).toUpperCase()}</AvatarFallback>
+                        </Avatar>
                     <div className="truncate">
                         <p className="text-sm font-medium">{username}</p>
                         <p className="text-xs font-medium">{auth.currentUser?.email}</p>
                     </div>
+                    <label className="cursor-pointer rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600">
+                        Upload
+                        <input type="file" className="hidden" onChange={handleUploadProfile} accept="image/*" />
+                    </label>
                 </div>
-                {/* Divider */}
                 <hr className="my-4 border-t border-gray-200 dark:border-gray-700"/>
-                {/* 频道列表滚动部分 */}
                 <div className="flex-1 overflow-y-auto">
                     <div className="grid gap-2">
                         {channels.map(channel => (
@@ -131,9 +200,8 @@ export default function Channels({ setSelectedChannel }) {
             </div>
         </div>
     );
-    
-    
 }
+
 
 
 

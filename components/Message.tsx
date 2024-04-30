@@ -1,30 +1,43 @@
 import { AvatarImage, AvatarFallback, Avatar } from "@/components/ui/avatar";
 import Image from "next/image";
 import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage";
+import { getDatabase, ref, get } from "firebase/database";
 import { useEffect, useState } from "react";
 
 
-export default function Message({ avatarAlt, avatarSrc, avatarFallback, senderName, messageContent, currentUser, fileUrl }) {
+const encodeEmail = email => email.replace(/\./g, ',');
+
+export default function Message({ avatarAlt, avatarFallback, senderName, messageContent, currentUser, fileUrl }) {
     const isCurrentUser = senderName === currentUser;
     const isVideo = fileUrl && fileUrl.endsWith(".mp4");
-
     const [fileDownloadUrl, setFileDownloadUrl] = useState(null);
-    
+    const [avatarSrc, setAvatarSrc] = useState("");
+    const database = getDatabase();
+
     useEffect(() => {
-        if (fileUrl) {
-            const storage = getStorage();
-            const fileStorageRef = storageRef(storage, fileUrl);
-            getDownloadURL(fileStorageRef)
-                .then((url) => {
-                    setFileDownloadUrl(url);
-                })
-                .catch((error) => {
-                    console.error("Error getting download URL:", error);
-                    // Handle error gracefully, e.g., set a default URL
-                    setFileDownloadUrl(null);
+        // Encode senderName (email) to be Firebase-path-friendly
+        const encodedEmail = encodeEmail(senderName);
+        const avatarRef = ref(database, `avatars/${encodedEmail}`);
+        
+        get(avatarRef).then((snapshot) => {
+            if (snapshot.exists() && snapshot.val().fileName) {
+                const fileName = snapshot.val().fileName;
+                const storage = getStorage();
+                const StorageRef = storageRef(storage, `avatars/${encodedEmail}/${fileName}`);
+
+                getDownloadURL(StorageRef).then((url) => {
+                    setAvatarSrc(url);
+                }).catch(error => {
+                    console.error('Error fetching download URL:', error);
                 });
-        }
-    }, [fileUrl]);
+            } else {
+                setAvatarSrc("/placeholder-avatar.jpg");
+            }
+        }).catch(error => {
+            console.error('Error fetching avatar data:', error);
+            setAvatarSrc("/placeholder-avatar.jpg");
+        });
+    }, [senderName]); // Ensure effect runs when senderName changes
 
     return (
         <div className={`flex items-start gap-2 p-4 ${isCurrentUser ? 'justify-end' : ''}`}>

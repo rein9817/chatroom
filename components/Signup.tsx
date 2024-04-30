@@ -9,6 +9,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithP
 import { getDatabase, ref, set } from "firebase/database";
 import { useNavigate } from 'react-router-dom';
 
+
 export default function Signup() {
     const [isLogin, setIsLogin] = useState(false);
     const [username, setUsername] = useState("");
@@ -120,6 +121,7 @@ export default function Signup() {
                 });
             });
     };
+
     const handleToggleAuth = (isLoginMode) => {
         setIsLogin(isLoginMode);
     };
@@ -132,6 +134,8 @@ export default function Signup() {
             handleSignup(e);
         }
     };
+
+    
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
@@ -185,8 +189,9 @@ export default function Signup() {
                             }}/>
                         </div>
                         <Button className="w-full">{isLogin ? "Log In" : "Sign Up"}</Button>
+                        {/* {!isLogin && <Button className="w-full" onClick={handleUploadProfile}>Upload User Profile</Button>} */}
                     </form>
-                </div>
+                </div>  
             </div>
         </div>
     );

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button"
 import { getDatabase, ref, get, push, update ,child, set, onChildAdded} from "firebase/database";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { init } from "next/dist/compiled/webpack/webpack";
 
 export default function Console({ selectedChannel }) {
     const [content, setContent] = useState('');
@@ -325,7 +324,7 @@ export default function Console({ selectedChannel }) {
                     <Message 
                         key={index} 
                         avatarAlt={message.sender} 
-                        avatarSrc="/placeholder-avatar.jpg" 
+                        // avatarSrc={"/placeholder-avatar.jpg"} 
                         avatarFallback={message.sender.slice(0, message.sender.indexOf('@')).toUpperCase()}
                         senderName={message.sender} 
                         messageContent={message.content} 
