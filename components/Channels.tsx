@@ -162,21 +162,23 @@ export default function Channels({ setSelectedChannel }) {
     return (
         <div className="hidden lg:block border-r bg-gray-100/40 dark:bg-gray-800/40">
             <div className="flex h-full max-h-screen flex-col p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4"> {/* Add margin-bottom */}
                     <h3 className="text-lg font-semibold">Channels</h3>
-                    <button className="btn-icon" onClick={handleAddChannel}>
-                        <PlusIcon className="h-4 w-4" />
-                    </button>
-                    <label className="cursor-pointer rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600">
-                        Upload
-                        <input type="file" className="hidden" onChange={handleUploadProfile} accept="image/*" />
-                    </label>
+                    <div className="flex items-center space-x-3"> {/* Increased space between buttons */}
+                        <button className="btn-icon" onClick={handleAddChannel}>
+                            <PlusIcon className="h-4 w-4" />
+                        </button>
+                        <label className="cursor-pointer rounded bg-blue-500 py-2 px-4 text-white hover:bg-blue-600">
+                            <UploadCloudIcon className="h-4 w-4 inline-block" />
+                            <input type="file" className="hidden" onChange={handleUploadProfile} accept="image/*" />
+                        </label>
+                    </div>
                 </div>
-                    <div className="flex items-center space-x-3 rounded-md px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-800">
-                        <Avatar className="h-12 w-12">
-                            <AvatarImage alt={`Avatar for ${auth.currentUser?.email}`} src={userAvatar.url || "/placeholder-avatar.jpg"} />
-                            <AvatarFallback>{auth.currentUser?.email?.slice(0, auth.currentUser.email.indexOf("@")).toUpperCase()}</AvatarFallback>
-                        </Avatar>
+                <div className="flex items-center space-x-3 rounded-md px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-800 mb-4"> {/* Add margin-bottom */}
+                    <Avatar className="h-12 w-12">
+                        <AvatarImage alt={`Avatar for ${auth.currentUser?.email}`} src={userAvatar.url || "/placeholder-avatar.jpg"} />
+                        <AvatarFallback>{auth.currentUser?.email?.slice(0, auth.currentUser.email.indexOf("@")).toUpperCase()}</AvatarFallback>
+                    </Avatar>
                     <div className="truncate">
                         <p className="text-sm font-medium">{username}</p>
                         <p className="text-xs font-medium">{auth.currentUser?.email}</p>
@@ -201,6 +203,8 @@ export default function Channels({ setSelectedChannel }) {
             </div>
         </div>
     );
+    
+    
 }
 
 
@@ -225,3 +229,24 @@ function PlusIcon(props:any) {
         </svg>
     );
 }
+
+
+function UploadCloudIcon(props:any) {
+    return (
+    <svg
+        {...props}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+        <path d="M12 12v9" />
+        <path d="m16 16-4-4-4 4" />
+    </svg>
+)}

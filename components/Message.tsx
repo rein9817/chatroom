@@ -49,15 +49,10 @@ export default function Message({ avatarAlt, avatarFallback, senderName, message
             )}
             <div className={`max-w-[80%] rounded-md bg-gray-100 p-3 text-sm dark:bg-gray-800`}>
                 {messageContent && !fileUrl && <p>{messageContent}</p>}
-                {fileUrl && !isVideo && fileDownloadUrl && (
+                {fileUrl && fileDownloadUrl && (
                     <div className="relative w-48 h-48">
                         <Image src={fileDownloadUrl} alt="Uploaded" layout="fill" objectFit="cover"/>
                     </div>
-                )}
-                {isVideo && fileDownloadUrl && (
-                    <video controls className="w-48 h-48">
-                        <source src={fileDownloadUrl} type="video/mp4" />
-                    </video>
                 )}
             </div>
             {isCurrentUser && (
