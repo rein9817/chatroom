@@ -19,7 +19,6 @@ export default function Console({ selectedChannel }) {
     const gotoBottom = useRef(null);
     const initialLoad=useRef(new Date().getTime());
     
-    console.log(initialLoad.current);
     const [file, setFile] = useState({
         url: "",
         name: null
