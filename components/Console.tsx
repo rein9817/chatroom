@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import { auth, db } from "../app/config";
 import Message from "./Message";
 import { signOut } from "firebase/auth";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button"
 import { getDatabase, ref, get, push, update ,child, set, onChildAdded} from "firebase/database";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { init } from "next/dist/compiled/webpack/webpack";
 
 export default function Console({ selectedChannel }) {
     const [content, setContent] = useState('');
@@ -16,7 +17,9 @@ export default function Console({ selectedChannel }) {
     const [currentUser, setCurrentUser] = useState(null);
     const inputRef = useRef(null);
     const gotoBottom = useRef(null);
-
+    const initialLoad=useRef(new Date().getTime());
+    
+    console.log(initialLoad.current);
     const [file, setFile] = useState({
         url: "",
         name: null
@@ -40,29 +43,34 @@ export default function Console({ selectedChannel }) {
     }, [messages]);
 
     useEffect(() => {
-        // 檢查 selectedChannel 是否有效
         if (!selectedChannel || !selectedChannel.id) {
-            setMessages([]);  // 如果無效，清空消息列表
-            return undefined; // 返回 undefined 防止執行後續代碼
+            setMessages([]);  // Clear messages if channel is invalid
+            return;
         }
     
-        // 清空消息列表以準備接收新頻道的消息
         setMessages([]);
-    
-        // 建立對新頻道的 Firebase 參考
+        console.log(initialLoad.current);
         const messagesRef = ref(db, `messages/${selectedChannel.id}`);
         
-        // 訂閱新消息
         const unsubscribeMessages = onChildAdded(messagesRef, (snapshot) => {
             const newMessage = snapshot.val();
-            setMessages(prevMessages => [...prevMessages, newMessage]);  // 更新消息列表
+            setMessages(prevMessages => [...prevMessages, newMessage]);  // Update message list
+    
+            if (newMessage.timestamp > initialLoad.current && newMessage.sender !== currentUser) {
+                showNotification(`New message from ${newMessage.sender} in channel ${newMessage.channel}: ${newMessage.content}`);
+            }
         });
     
-        // 返回一個函數來取消監聽，這樣當組件卸載或頻道改變時會被調用
-        return () => {
-            unsubscribeMessages();  // 取消消息監聽
-        };
-    }, [selectedChannel, db]);  // 確保依賴於 selectedChannel 和 
+        if (!("Notification" in window)) {
+            console.log("This browser does not support desktop notifications");
+        } else if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    
+        return () => unsubscribeMessages();  // Cleanup subscription
+    }, [selectedChannel, db, currentUser]);  // Dependencies
+    
+    
     
     
 
@@ -162,6 +170,14 @@ export default function Console({ selectedChannel }) {
             });
 
             fetchMessages(selectedChannel);
+            enqueueSnackbar("Adding user successfully", { 
+                anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                },
+                variant: 'success'
+            });
+
         } catch (error) {
             enqueueSnackbar("Adding user failed", { 
                 anchorOrigin: {
@@ -194,7 +210,7 @@ export default function Console({ selectedChannel }) {
         });
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = (e:any) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
             console.log(selectedFile.type);
@@ -206,7 +222,7 @@ export default function Console({ selectedChannel }) {
         }
     };
 
-    const handleUploadVideo = (file) => {
+    const handleUploadVideo = (file:any) => {
         if (!file) {
             return;
         }
@@ -231,7 +247,7 @@ export default function Console({ selectedChannel }) {
         
     };
 
-    const handleUploadImage = (file) => {
+    const handleUploadImage = (file:any) => {
         if (!file) {
             return;
         }
@@ -269,21 +285,21 @@ export default function Console({ selectedChannel }) {
     
     
 
-    const handleEnter = (e) => {
+    const handleEnter = (e:any) => {
         if (e.key === 'Enter') {
             handleSend();
         }
     };
 
-    function showNotification(message) {
+    function showNotification(message:string) {
         if (!("Notification" in window)) {
-            console.log("Browser does not support desktop notification");
-        } else {
+            console.log("This browser does not support desktop notification");
+        } else if (Notification.permission === "granted") {
+            new Notification(message);
+        } else if (Notification.permission !== "denied") {
             Notification.requestPermission().then(function (permission) {
                 if (permission === "granted") {
-                    new Notification("New Message", {
-                        body: message,
-                    });
+                    new Notification(message);
                 }
             });
         }
@@ -354,7 +370,7 @@ export default function Console({ selectedChannel }) {
 }
 
 
-function SendIcon(props) {
+function SendIcon(props:any) {
     return (
         <svg
             {...props}
@@ -374,7 +390,7 @@ function SendIcon(props) {
     );
 }
 
-function LogOutIcon(props) {
+function LogOutIcon(props:any) {
     return (
         <svg
             {...props}
@@ -395,7 +411,7 @@ function LogOutIcon(props) {
     );
 }
 
-function PaperclipIcon(props) {
+function PaperclipIcon(props:any) {
     return (
         <svg
             {...props}
@@ -414,7 +430,7 @@ function PaperclipIcon(props) {
     );
 }
 
-function VideoIcon(props) {
+function VideoIcon(props:any) {
     return (
         <svg
             {...props}
