@@ -118,7 +118,7 @@ export default function Channels({ setSelectedChannel }) {
     }
 
 
-    const handleChannelClick = (channel) => {
+    const handleChannelClick = (channel:any) => {
         setSelectedChannel(channel); // Update selected channel
     };
 
