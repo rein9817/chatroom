@@ -4,7 +4,6 @@ import { auth } from "../app/config";
 import { getDatabase, ref, onValue ,get,child,push,set} from 'firebase/database';
 import Channel from './Channel';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function Channels({ setSelectedChannel }) {
@@ -71,10 +70,6 @@ export default function Channels({ setSelectedChannel }) {
 
     function encodeEmail(email:string) {
         return email.replace(/\./g, ',');
-    }
-
-    function decodeEmail(encodedEmail:string) {
-        return encodedEmail.replace(/,/g, '.');
     }
 
     const handleAddChannel = () => {

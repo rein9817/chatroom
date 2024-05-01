@@ -208,78 +208,64 @@ export default function Console({ selectedChannel }) {
         });
     };
 
-    const handleFileChange = (e:any) => {
-        const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            console.log(selectedFile.type);
-            if (selectedFile.type.includes('video')) {
-                handleUploadVideo(selectedFile);
-            } else {
-                handleUploadImage(selectedFile);
-            }
-        }
-    };
 
-    const handleUploadVideo = (file:any) => {
+    
+
+    const handleUploadImage = (file) => {
         if (!file) {
             return;
         }
     
-        const storage = getStorage();
-        const user = auth.currentUser;
-
-        const StorageRef = storageRef(storage, `videos/${user.email}/${file.name}`);
-        uploadBytes(StorageRef, file)
-            .then((snapshot) => {
-                console.log("Video uploaded successfully");
-                console.log(snapshot);
-
-                setFile({
-                    url: snapshot.ref.fullPath,
-                    name: file.name
-                });
-            })
-            .catch((error) => {
-                console.error('Error uploading video:', error);
-            });
-        
-    };
-
-    const handleUploadImage = (file:any) => {
-        if (!file) {
-            return;
-        }
+        console.log(file);
     
         const storage = getStorage();
         const user = auth.currentUser;
-        const StorageRef = storageRef(storage, `users/${user.email}/${file.name}`);
+        const encodedEmail = encodeEmail(user.email);
+        const StorageRef = storageRef(storage, `users/${encodedEmail}/${file.name}`);
+    
+        let post_data = {
+            content: "",
+            timestamp: new Date().getTime(),
+            sender: user.email,
+            fileUrl: "" 
+        };
     
         uploadBytes(StorageRef, file)
             .then((snapshot) => {
                 console.log("Success uploading image");
-                setFile({
-                    url: snapshot.ref.fullPath,
-                    name: file.name
-                });
-                const post_data = {
-                    content: "", // 消息内容为空
-                    timestamp: new Date().getTime(),
-                    sender: user.email,
-                    fileUrl: snapshot.ref.fullPath // 图片URL设置为fileUrl属性
-                };
+    
+                return getDownloadURL(snapshot.ref); // Return this promise to chain it
+            })
+            .then((downloadURL) => {
+                console.log("Success fetching download URL");
+                post_data.fileUrl = downloadURL; // Set file URL after successful fetching
+    
                 const messagesRef = ref(db, `messages/${selectedChannel.id}`);
-                push(messagesRef, post_data)
-                    .then(() => {
-                        fetchMessages(selectedChannel);
-                    })
-                    .catch((error) => {
-                        console.error('Error sending message:', error);
-                    });
+                console.log(downloadURL);
+                // Now push post_data inside this then block
+                return push(messagesRef, post_data);
+            })
+            .then(() => {
+                console.log("Message posted with file URL");
+                fetchMessages(selectedChannel); // Update messages list state
+                setContent(''); // Clear input field content
+                setFile({ // Reset file state
+                    url: "",
+                    name: null
+                });
             })
             .catch((error) => {
-                console.error('Error uploading image:', error);
+                console.error('Error during image upload or message sending:', error);
             });
+    
+        setTimeout(() => {
+            setContent('');
+            if (inputRef.current) {
+                inputRef.current.value = '';
+            }
+        }, 100);
     };
+    
     
     
 
@@ -348,8 +334,10 @@ export default function Console({ selectedChannel }) {
                         <input
                             id="file-input"
                             type="file"
-                            onChange={handleFileChange}
-                            style={{ display: 'none' }} // Hide the file input
+                            onChange={(e:any)=>{
+                                handleUploadImage(e.target.files[0]);
+                            }}
+                            style={{ display: 'none' }}
                         />
                         <Button size="icon" variant="ghost" onClick={() => document.getElementById('file-input').click()}>
                             <PaperclipIcon className="h-5 w-5" />
@@ -445,3 +433,6 @@ function PaperclipIcon(props:any) {
     );
 }
 
+function encodeEmail(email:string) {
+    return email.replace(/\./g, ',');
+}

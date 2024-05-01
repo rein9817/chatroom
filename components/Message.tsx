@@ -4,18 +4,14 @@ import { getStorage, ref as storageRef, getDownloadURL } from "firebase/storage"
 import { getDatabase, ref, get } from "firebase/database";
 import { useEffect, useState } from "react";
 
-
 const encodeEmail = email => email.replace(/\./g, ',');
 
-export default function Message({ avatarAlt, avatarFallback, senderName, messageContent, currentUser, fileUrl }) {
+export default function Message({ avatarAlt, avatarFallback, senderName, messageContent, currentUser, imageUrl }) {
     const isCurrentUser = senderName === currentUser;
-    const isVideo = fileUrl && fileUrl.endsWith(".mp4");
-    const [fileDownloadUrl, setFileDownloadUrl] = useState(null);
     const [avatarSrc, setAvatarSrc] = useState("");
     const database = getDatabase();
 
     useEffect(() => {
-        // Encode senderName (email) to be Firebase-path-friendly
         const encodedEmail = encodeEmail(senderName);
         const avatarRef = ref(database, `avatars/${encodedEmail}`);
         
@@ -24,7 +20,7 @@ export default function Message({ avatarAlt, avatarFallback, senderName, message
                 const fileName = snapshot.val().fileName;
                 const storage = getStorage();
                 const StorageRef = storageRef(storage, `avatars/${encodedEmail}/${fileName}`);
-
+    
                 getDownloadURL(StorageRef).then((url) => {
                     setAvatarSrc(url);
                 }).catch(error => {
@@ -47,11 +43,11 @@ export default function Message({ avatarAlt, avatarFallback, senderName, message
                     <AvatarFallback>{avatarFallback}</AvatarFallback>
                 </Avatar>
             )}
-            <div className={`max-w-[80%] rounded-md bg-gray-100 p-3 text-sm dark:bg-gray-800`}>
-                {messageContent && !fileUrl && <p>{messageContent}</p>}
-                {fileUrl && fileDownloadUrl && (
+            <div className={`max-w-[80%] rounded-md p-3 text-sm ${isCurrentUser ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                {messageContent && !imageUrl && <p>{messageContent}</p>}
+                {imageUrl && (
                     <div className="relative w-48 h-48">
-                        <Image src={fileDownloadUrl} alt="Uploaded" layout="fill" objectFit="cover"/>
+                        <Image src={imageUrl} alt="test" height={300} width={300}/>
                     </div>
                 )}
             </div>
