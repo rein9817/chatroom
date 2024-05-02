@@ -140,6 +140,7 @@ export default function Signup() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen px-4 py-8">
             <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow">
+                
                 <div className="flex justify-between">
                     <Button className={isLogin ? "" : "border-b-2 border-blue-500"} variant={isLogin ? "ghost" : "primary"} onClick={() => handleToggleAuth(false)}>Sign Up</Button>
                     <Button className={isLogin ? "border-b-2 border-blue-500" : ""} variant={isLogin ? "primary" : "ghost"} onClick={() => handleToggleAuth(true)}>

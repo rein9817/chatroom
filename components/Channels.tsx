@@ -9,6 +9,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 export default function Channels({ setSelectedChannel }) {
     const [channels, setChannels] = useState([]);
     const [username, setUsername] = useState('');
+    const [activeChannelId, setActiveChannelId] = useState(null); 
     const [userAvatar, setUserAvatar] = useState({
         url: '',
         alt: '',
@@ -119,7 +120,8 @@ export default function Channels({ setSelectedChannel }) {
 
 
     const handleChannelClick = (channel:any) => {
-        setSelectedChannel(channel); // Update selected channel
+        setSelectedChannel(channel);
+        setActiveChannelId(channel.id);
     };
 
     const handleUploadProfile = (e:any) => {    
@@ -191,6 +193,7 @@ export default function Channels({ setSelectedChannel }) {
                                 avatarFallback={channel.name.slice(0, 2).toUpperCase()}
                                 channelName={channel.name}
                                 onClick={() => handleChannelClick(channel)}
+                                isActive={channel.id === activeChannelId}
                             />
                         ))}
                     </div>

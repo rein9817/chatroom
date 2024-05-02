@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { enqueueSnackbar } from 'notistack';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button"
-import { getDatabase, ref, get, push, update ,child, set, onChildAdded} from "firebase/database";
+import { getDatabase, ref, get, push, update ,child, set, onChildAdded,onValue} from "firebase/database";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function Console({ selectedChannel }) {
@@ -17,7 +17,9 @@ export default function Console({ selectedChannel }) {
     const inputRef = useRef(null);
     const gotoBottom = useRef(null);
     const initialLoad=useRef(new Date().getTime());
-    
+    const [blockedUsers, setBlockedUsers] = useState([]);
+    const [blockListLoaded, setBlockListLoaded] = useState(false);
+
     const [file, setFile] = useState({
         url: "",
         name: null
@@ -31,42 +33,96 @@ export default function Console({ selectedChannel }) {
                 setCurrentUser(user.email);
             } else {
                 setCurrentUser(null);
+                setBlockedUsers([]);
+                setMessages([]);
             }
         });
+    
         return () => unsubscribeAuth();
     }, []);
-
+    
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
 
     useEffect(() => {
-        if (!selectedChannel || !selectedChannel.id) {
-            setMessages([]);  // Clear messages if channel is invalid
+        if (blockListLoaded && selectedChannel && selectedChannel.id) {
+            // Now load messages because block list is loaded
+            // Existing message fetching logic here...
+            setMessages([]);
+    
+            const messagesRef = ref(db, `messages/${selectedChannel.id}`);
+            const blockListRef = ref(db, `blocks/${encodeEmail(currentUser)}`);
+        
+            // 监听封锁名单的变化
+            const unsubscribeBlocks = onValue(blockListRef, (snapshot) => {
+                const newBlockedUsers = [];
+                snapshot.forEach(childSnapshot => {
+                    newBlockedUsers.push(childSnapshot.val().blocker);
+                });
+                setBlockedUsers(newBlockedUsers);
+            }, error => {
+                console.error("Failed to fetch block list:", error);
+            });
+        
+            // 监听新消息
+            const unsubscribeMessages = onChildAdded(messagesRef, (snapshot) => {
+                const newMessage = snapshot.val();
+                if (!blockedUsers.includes(newMessage.sender)) {
+                    setMessages(prevMessages => [...prevMessages, newMessage]);
+                }
+            }, error => {
+                console.error("Failed to subscribe to messages:", error);
+            });
+        
+            return () => {
+                unsubscribeBlocks();
+                unsubscribeMessages();
+            };
+        }
+    }, [blockListLoaded, selectedChannel]);
+
+    
+    // useEffect(() => {
+    //     if (!selectedChannel || !selectedChannel.id || !currentUser) {
+    //         return;
+    //     }
+        
+    //     // 清空消息以准备新的频道数据
+       
+    // }, [selectedChannel, db, currentUser]);
+    
+    useEffect(() => {
+        if (!currentUser) {
+            console.log('Current user is not defined.');
             return;
         }
     
-        setMessages([]);
-        console.log(initialLoad.current);
-        const messagesRef = ref(db, `messages/${selectedChannel.id}`);
-        
-        const unsubscribeMessages = onChildAdded(messagesRef, (snapshot) => {
-            const newMessage = snapshot.val();
-            setMessages(prevMessages => [...prevMessages, newMessage]);  // Update message list
+        const blockListRef = ref(db, `blocks/${encodeEmail(currentUser)}`);
     
-            if (newMessage.timestamp > initialLoad.current && newMessage.sender !== currentUser) {
-                showNotification(`New message from ${newMessage.sender} in channel ${newMessage.channel}: ${newMessage.content}`);
-            }
+        const unsubscribeBlocks = onValue(blockListRef, (snapshot) => {
+            const newBlockedUsers = [];
+            snapshot.forEach(childSnapshot => {
+                newBlockedUsers.push(childSnapshot.val().blocker);
+            });
+            setBlockedUsers(newBlockedUsers);
+            setBlockListLoaded(true); // 设置封锁列表已加载
+        }, error => {
+            console.error("Failed to fetch block list:", error);
         });
     
-        if (!("Notification" in window)) {
-            console.log("This browser does not support desktop notifications");
-        } else if (Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
+        return () => {
+            unsubscribeBlocks();
+            setBlockListLoaded(false); // 重置封锁列表加载状态
+        };
+    }, [currentUser]);
     
-        return () => unsubscribeMessages();  // Cleanup subscription
-    }, [selectedChannel, db, currentUser]);  // Dependencies
+    
+
+    // 过滤封锁用户的消息
+    useEffect(() => {
+        setMessages(prevMessages => prevMessages.filter(message => !blockedUsers.includes(message.sender)));
+    }, [blockedUsers]);
     
     
     
@@ -118,9 +174,9 @@ export default function Console({ selectedChannel }) {
     
         push(messagesRef, post_data)
             .then(() => {
-                fetchMessages(selectedChannel); // 更新消息列表状态
-                setContent(''); // 清空输入框内容
-                setFile({      // 清空文件状态
+                fetchMessages(selectedChannel);
+                setContent(''); 
+                setFile({      
                     url: "",
                     name: null
                 });
@@ -211,7 +267,7 @@ export default function Console({ selectedChannel }) {
 
     
 
-    const handleUploadImage = (file) => {
+    const handleUploadImage = (file:any) => {
         if (!file) {
             return;
         }
@@ -289,6 +345,22 @@ export default function Console({ selectedChannel }) {
         }
     }
 
+
+    const handleBlockUser = () => {
+        const blockEmail = prompt("Enter the email of the user you want to block");
+        if (!blockEmail || !currentUser) {
+            console.error("No block email provided or current user is undefined.");
+            return;
+        }
+
+        const blockRef = ref(db, `blocks/${encodeEmail(currentUser)}`);
+        push(blockRef, { blocker: blockEmail, timestamp: new Date().getTime() })
+            .then(() => console.log("User blocked successfully"))
+            .catch(error => console.error("Error blocking user:", error));
+    };
+    
+
+
     return (
         <div className="flex flex-col">
             <header className="flex h-14 items-center justify-between border-b bg-gray-100/40 px-4 dark:bg-gray-800/40">
@@ -296,6 +368,9 @@ export default function Console({ selectedChannel }) {
                     <h2 className="text-lg font-semibold">Chatroom</h2>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="destructive" onClick={handleBlockUser}>
+                        <BanIcon className="h-5 w-5" />
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={handleAddUser}>
                         <UsersIcon className="w-5 h-5" />
                     </Button>
@@ -306,20 +381,22 @@ export default function Console({ selectedChannel }) {
             </header>
 
             <main className="flex-1 overflow-auto">
-                {messages.map((message, index) => (
-                    <Message 
-                        key={index} 
-                        avatarAlt={message.sender} 
-                        // avatarSrc={"/placeholder-avatar.jpg"} 
-                        avatarFallback={message.sender.slice(0, message.sender.indexOf('@')).toUpperCase()}
-                        senderName={message.sender} 
-                        messageContent={message.content} 
-                        currentUser={currentUser} 
-                        imageUrl={message.fileUrl}
-                    />
-                ))}
-                <div ref={gotoBottom}></div>
-            </main>
+            {messages.map((message, index) => {
+                return (
+                        <Message 
+                            key={index}
+                            avatarAlt={message.sender}
+                            avatarFallback={message.sender.slice(0, message.sender.indexOf('@')).toUpperCase()}
+                            senderName={message.sender}
+                            messageContent={message.content}
+                            currentUser={currentUser}
+                            imageUrl={message.fileUrl}
+                        />
+                        );
+            })}
+    <div ref={gotoBottom}></div>
+</main>
+
 
             <footer className="border-t bg-gray-100/40 p-4 dark:bg-gray-800/40 sticky bottom-0">
                 <div className="flex items-center gap-2">
@@ -433,6 +510,28 @@ function PaperclipIcon(props:any) {
     );
 }
 
-function encodeEmail(email:string) {
+function encodeEmail(email:any) {
+    if (!email) {
+        return '';
+    }
     return email.replace(/\./g, ',');
 }
+
+function BanIcon(props:any) {
+    return (
+    <svg
+        {...props}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
+        <circle cx="12" cy="12" r="10" />
+        <path d="m4.9 4.9 14.2 14.2" />
+    </svg>
+)}

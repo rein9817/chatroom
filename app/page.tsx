@@ -3,6 +3,8 @@ import Menu from "@/components/Menu";
 import Signup from "@/components/Signup"
 import { SnackbarProvider} from 'notistack'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import "./globals.css";
+
 
 export default function Home() {
   return (

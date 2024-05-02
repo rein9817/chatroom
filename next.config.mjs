@@ -1,8 +1,10 @@
-/** @type {import('next').NextConfig} */
+/**
+ * @type {import('next').NextConfig}
+ */
 const nextConfig = {
+    output: 'export', // This enables static export of your Next.js project
     images: {
-        domains: ['firebasestorage.googleapis.com'],
+      domains: ['firebasestorage.googleapis.com'],
     },
-};
-
-export default nextConfig;
+  };
+module.exports=nextConfig;
